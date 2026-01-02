@@ -89,11 +89,16 @@ public class Toast extends CordovaPlugin {
             // assuming a number of ms
             hideAfterMs = Integer.parseInt(duration);
           }
-          final android.widget.Toast toast = android.widget.Toast.makeText(
-              IS_AT_LEAST_LOLLIPOP ? cordova.getActivity().getWindow().getContext() : cordova.getActivity().getApplicationContext(),
-              message,
-              "short".equalsIgnoreCase(duration) ? android.widget.Toast.LENGTH_SHORT : android.widget.Toast.LENGTH_LONG
+          final android.widget.Toast toast = new android.widget.Toast(
+              IS_AT_LEAST_LOLLIPOP ? cordova.getActivity().getWindow().getContext() : cordova.getActivity().getApplicationContext()
           );
+          final TextView toastTextView = new TextView(cordova.getActivity().getApplicationContext());
+          toastTextView.setText(message);
+          toastTextView.setSingleLine(false);
+          toastTextView.setMaxLines(Integer.MAX_VALUE);
+          toastTextView.setEllipsize(null);
+          toastTextView.setGravity(Gravity.CENTER);
+          toast.setView(toastTextView);
 
           if ("top".equals(position)) {
             toast.setGravity(GRAVITY_TOP, 0, BASE_TOP_BOTTOM_OFFSET + addPixelsY);
@@ -106,38 +111,45 @@ public class Toast extends CordovaPlugin {
             return;
           }
 
-          // if one of the custom layout options have been passed in, draw our own shape
-          // (but disabled on Android >= 11 since custom toast views are deprecated)
-          if (styling != null && IS_AT_LEAST_JELLY_BEAN && !IS_AT_LEAST_R) {
+          final String backgroundColor;
+          final String textColor;
+          final Double textSize;
+          final double opacity;
+          final int cornerRadius;
+          final int horizontalPadding;
+          final int verticalPadding;
+          if (styling != null && IS_AT_LEAST_JELLY_BEAN) {
+            backgroundColor = styling.optString("backgroundColor", "#333333");
+            textColor = styling.optString("textColor", "#ffffff");
+            textSize = styling.optDouble("textSize", -1);
+            opacity = styling.optDouble("opacity", 0.8);
+            cornerRadius = styling.optInt("cornerRadius", 100);
+            horizontalPadding = styling.optInt("horizontalPadding", 50);
+            verticalPadding = styling.optInt("verticalPadding", 30);
+          } else {
+            backgroundColor = "#333333";
+            textColor = "#ffffff";
+            textSize = -1.0;
+            opacity = 0.8;
+            cornerRadius = 100;
+            horizontalPadding = 50;
+            verticalPadding = 30;
+          }
 
-            // the defaults mimic the default toast as close as possible
-            final String backgroundColor = styling.optString("backgroundColor", "#333333");
-            final String textColor = styling.optString("textColor", "#ffffff");
-            final Double textSize = styling.optDouble("textSize", -1);
-            final double opacity = styling.optDouble("opacity", 0.8);
-            final int cornerRadius = styling.optInt("cornerRadius", 100);
-            final int horizontalPadding = styling.optInt("horizontalPadding", 50);
-            final int verticalPadding = styling.optInt("verticalPadding", 30);
-
+          if (IS_AT_LEAST_JELLY_BEAN) {
             GradientDrawable shape = new GradientDrawable();
             shape.setCornerRadius(cornerRadius);
             shape.setAlpha((int)(opacity * 255)); // 0-255, where 0 is an invisible background
             shape.setColor(Color.parseColor(backgroundColor));
-            toast.getView().setBackground(shape);
-
-            final TextView toastTextView;
-            toastTextView = (TextView) toast.getView().findViewById(android.R.id.message);
-            toastTextView.setTextColor(Color.parseColor(textColor));
-            if (textSize > -1) {
-              toastTextView.setTextSize(textSize.floatValue());
-            }
-
-            toast.getView().setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
-
-            // this gives the toast a very subtle shadow on newer devices
-            if (IS_AT_LEAST_LOLLIPOP) {
-              toast.getView().setElevation(6);
-            }
+            toastTextView.setBackground(shape);
+          }
+          toastTextView.setTextColor(Color.parseColor(textColor));
+          if (textSize > -1) {
+            toastTextView.setTextSize(textSize.floatValue());
+          }
+          toastTextView.setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
+          if (IS_AT_LEAST_LOLLIPOP) {
+            toastTextView.setElevation(6);
           }
 
           if (IS_AT_LEAST_R) {
